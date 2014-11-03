@@ -121,16 +121,16 @@ class MeasureAngleAxisCluster(MeasurePolicy):
             theta_min = 10.
             mx2 = rotations.aa2mx(p2)
             mx1 = rotations.aa2mx(p1).transpose()
-            mx =  np.dot(mx1, mx2)
+            mx =  np.dot(mx1, mx2)  # rotation from p1 to p2.
             for rot in site.symmetries:
-                mx_diff = np.dot(mx, rot)
-                theta = np.linalg.norm(rotations.mx2aa(mx_diff))
-                                       
+                mx_diff = np.dot(mx, rot) # rotate the molecular symmetry operation by the rotation between the two poses
+                theta = np.linalg.norm(rotations.mx2aa(mx_diff)) # obtain the angle of rotation
+                # Subtract off any full turns of 2pi from theta                       
                 theta -= int(theta/2./pi)*2.*pi
-                if(theta < theta_min): 
+                if(theta < theta_min): # the first time this is tested it will definitely be true (2pi<10)
                     theta_min = theta
-                    rot_best = rot
-            p2[:] = rotations.rotate_aa(rotations.mx2aa(rot_best), p2)
+                    rot_best = rot  # gives the molecular symmetry operation that minimises the rotation angle between the two poses
+            p2[:] = rotations.rotate_aa(rotations.mx2aa(rot_best), p2) # perform the operation
                     
 
     def get_dist(self, X1, X2):
@@ -204,7 +204,7 @@ class MinPermDistAACluster(MinPermDistCluster):
         
         if measure is None:
             measure = MeasureAngleAxisCluster(topology, transform=transform)
-        
+
         MinPermDistCluster.__init__(self, transform=transform, measure=measure, **kwargs)
 
     def _standard_alignments(self, x1, x2):

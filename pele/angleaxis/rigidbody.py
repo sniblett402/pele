@@ -173,7 +173,6 @@ class RigidFragmentBulk(RigidFragment):
         """return the shortest vector from com1 to com2 (both numpy arrays containing 
         coordinates for any number of atoms) using periodic boundary conditions.
         """
-        #print "Using periodic boundary conditions, Python version"
         boxvec = self.boxsize
         dx = com2 - com1  
         dx = dx.reshape(-1, boxvec.size) # sn402: takes dx (however long it is - 

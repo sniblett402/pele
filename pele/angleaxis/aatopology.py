@@ -99,7 +99,6 @@ class AASiteType(object):
         returns:
             distance squared
         '''
-        print self.get_smallest_rij(com1, com2)
         return sitedist(self.get_smallest_rij(com1, com2), p1, p2, self.S, self.W, self.cog)
 
     def distance_squared_grad(self, com1, p1, com2, p2):
