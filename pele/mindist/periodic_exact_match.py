@@ -1,9 +1,12 @@
 import numpy as np
 import copy
 
+from math import pi
 from _minpermdist_policies import MeasurePolicy, TransformPolicy
 from pele.mindist.permutational_alignment import find_best_permutation
 from pele.utils.rbtools import CoordsAdapter
+from pele.utils import rotations
+from pele.angleaxis import _cpp_aa
 
 class MeasurePeriodic(MeasurePolicy):
     ''' interface for possible measurements on a set of coordinates with periodic boundary conditions
@@ -26,8 +29,9 @@ class MeasurePeriodic(MeasurePolicy):
 
     def get_dist(self, X1, X2):
         ''' calculate the distance between 2 set of coordinates '''
-    
-        dx = X2 - X1
+        atom1 = np.copy(X1)  
+        atom2 = np.copy(X2)
+        dx = atom2 - atom1
         dx = dx.reshape(-1,len(self.boxlengths))
         dx -= np.round(dx * self.iboxlengths) * self.boxlengths
         return np.linalg.norm(dx.flatten())
@@ -37,18 +41,33 @@ class MeasurePeriodic(MeasurePolicy):
     
     def get_com(self, X):
         raise NotImplementedError("Center of mass not defined for periodic systems")   
-    
+     
 
-# sn402: do we care about atomic positions, or just centres of mass?
-# If the latter, ignore this class altogether
+# sn402: This whole class is new
 class MeasurePeriodicRigid(MeasurePeriodic):
     def __init__(self, box_lengths, topology, permlist=None):
         self.boxlengths = np.array(box_lengths)
         self.iboxlengths = 1. / self.boxlengths
         self.permlist = permlist
         self.topology = topology
-        
-    def get_dist(self, X1, X2):                         
+        try:
+            self.cpp_measure = _cpp_aa.cdefMeasureAngleAxisCluster(self.topology)
+        except AttributeError:
+            pass
+
+#    def get_dist(self, X1, X2):
+#        ''' calculate the distance between 2 set of coordinates '''
+#        ca1 = CoordsAdapter(coords=X1)
+#        ca2 = CoordsAdapter(coords=X2)            
+#        dx = ca2.posRigid - ca1.posRigid
+#        dx = dx.reshape(-1,len(self.boxlengths)) 
+#        dx -= np.round(dx * self.iboxlengths) * self.boxlengths
+#        return np.linalg.norm(dx.flatten())
+
+# sn402: do we care about distance between atomic positions, or just centres of mass?
+     
+    def get_dist(self, X1, X2):  
+                      
         x1 = X1.copy()
         x2 = X2.copy()
 
@@ -59,6 +78,36 @@ class MeasurePeriodicRigid(MeasurePeriodic):
         dx = dx.reshape(-1,len(self.boxlengths))
         dx -= np.round(dx * self.iboxlengths) * self.boxlengths
         return np.linalg.norm(dx.flatten())
+    
+
+    def align(self, coords1, coords2):
+        """align the rotations so that the atomistic coordinates will be in best alignment"""
+        #print "Starting alignment"
+        try:
+            return self.cpp_measure.align(coords1, coords2)
+        except AttributeError:
+            print "Couldn't use cpp align function"
+            pass
+        c1 = self.topology.coords_adapter(coords1)
+        c2 = self.topology.coords_adapter(coords2)
+        
+        # now account for symmetry in water
+        for p1, p2, site in zip(c1.rotRigid,c2.rotRigid, self.topology.sites):
+            theta_min = 10.
+            mx2 = rotations.aa2mx(p2)
+            mx1 = rotations.aa2mx(p1).transpose()
+            mx =  np.dot(mx1, mx2)  # rotation from p1 to p2.
+            for rot in site.symmetries:
+                mx_diff = np.dot(mx, rot) # rotate the molecular symmetry operation by the rotation between the two poses
+                theta = np.linalg.norm(rotations.mx2aa(mx_diff)) # obtain the angle of rotation
+                # Subtract off any full turns of 2pi from theta                       
+                theta -= int(theta/2./pi)*2.*pi
+                if(theta < theta_min): # the first time this is tested it will definitely be true (2pi<10)
+                    theta_min = theta
+                    rot_best = rot  # gives the molecular symmetry operation that minimises the rotation angle between the two poses
+            #print "best rotation:" 
+            #print rot_best
+            p2[:] = rotations.rotate_aa(rotations.mx2aa(rot_best), p2) # perform the operation
     
     
 class TransformPeriodic(TransformPolicy):

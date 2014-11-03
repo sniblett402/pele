@@ -117,8 +117,12 @@ class RBSystem(AASystem):
         GLU.gluCylinder(g, .1,0.1,r,10,10)  #I can't seem to draw a cylinder
         GL.glPopMatrix()
         
-    def draw(self, rbcoords, index, shift_com=True): # pragma: no cover
-        from OpenGL import GL, GLUT    
+    def draw(self, rbcoords, index, boxvec=None, shift_com=True): # pragma: no cover
+        from OpenGL import GL, GLUT  
+        
+        if boxvec is not None:
+            ca = self.aatopology.coords_adapter(coords=rbcoords)
+            ca.posRigid -= boxvec * np.round(ca.posRigid / boxvec)  
         coords = self.aasystem.to_atomistic(rbcoords)
         if shift_com:
             com=np.mean(coords, axis=0)

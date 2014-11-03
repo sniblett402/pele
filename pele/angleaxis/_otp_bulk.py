@@ -7,7 +7,8 @@ from numpy import cos, sin, pi
 from pele.angleaxis import RBTopologyBulk, RBSystem, RigidFragmentBulk, RBPotentialWrapper
 from pele.potentials.ljcut import LJCut
 from pele.mindist.minpermdist_stochastic import MinPermDistBulk
-from pele.mindist.periodic_exact_match import MeasurePeriodic
+from pele.mindist.periodic_exact_match import MeasurePeriodicRigid
+
 
 def put_in_box(x, boxvec):
     x = x.reshape(-1, boxvec.size)
@@ -58,9 +59,10 @@ class OTPBulk(RBSystem):
     
     def get_random_configuration(self):
         x = np.zeros([self.nrigid,6])
-        for i in range(3):
-            x[:,i] = np.random.uniform(-self.boxvec[i]/2., self.boxvec[i]/2., self.nrigid)
-        for i in range(3,6):
+        #for i in range(3):
+        #    x[:,i] = np.random.uniform(-self.boxvec[i]/2., self.boxvec[i]/2., self.nrigid)
+        #for i in range(3,6):
+        for i in range(6):
             x[:,i] = 5.*np.random.random(self.nrigid)
         return x.flatten()
 
@@ -84,6 +86,8 @@ class OTPBulk(RBSystem):
         tssearch.lowestEigenvectorQuenchParams["nsteps"] = 50
         tssearch.iprint=1
         tssearch.nfail_max = 100
+        
+        self.params.takestep.translate = 0.5
     
     def get_potential(self):
         """construct the rigid body potential"""
@@ -98,16 +102,33 @@ class OTPBulk(RBSystem):
             return self.pot
         
     def get_mindist(self, **kwargs):
-        measure = MeasurePeriodic(self.boxvec)
+        measure = MeasurePeriodicRigid(self.boxvec, self.aatopology)
         return MinPermDistBulk(self.boxvec, measure, niter=10, verbose=False, tol=0.01, 
-                 accuracy=0.01)
-
+                 accuracy=0.01)   
         
+    def get_compare_exact(self, **kwargs):
+        """ No compare_exact routine implemented for this system """
+        pass
+
+    def draw(self, coordslinear, index): # pragma: no cover
+        """
+        tell the gui how to represent your system using openGL objects
+        
+        Parameters
+        ----------
+        coords : array
+        index : int
+            we can have more than one molecule on the screen at one time.  index tells
+            which one to draw.  They are viewed at the same time, so they should be
+            visually distinct, e.g. different colors.  accepted values are 1 or 2        
+        """
+        RBSystem.draw(self, coordslinear, index, boxvec=self.boxvec)
+         
 
 def test_bh():
     np.random.seed(0)
     nmol = 5
-    boxl = np.array([15,10,5])
+    boxl = np.array([10.,10.,5.])
     rcut = 2.5
     system = OTPBulk(nmol,boxl,rcut)   
     db = system.create_database()
@@ -122,12 +143,17 @@ def test_bh():
     print m1.energy
     print db.minima()[1].energy
     print db.minima()[2].energy   
-    return db
+    #return db
+       
+    from pele.gui import run_gui
+    run_gui(system,db)
+    #oname = ""
+    #system.load_coords_pymol([m1.coords], oname)
 
 def test_gui():
     from pele.gui import run_gui
     nmol = 5
-    system = OTPBulk(nmol,np.array([15,10,5]),2.5)
+    system = OTPBulk(nmol,np.array([5,5,5]),2.5)
     
     run_gui(system)
     
@@ -148,25 +174,29 @@ def test_PBCs():
     # there are 3 atoms being displaced.
     print a
     
+    print "Symmetries:", system.aatopology.sites[0].symmetries
+    
 def test_mindist():
     nmol = 2
     boxl = np.array([5,5,5])
     rcut = 2.5
     system = OTPBulk(nmol,boxl,rcut) 
     #print system.aatopology.boxvec  
-    coords1 = np.array([0.,0.,0.,0.,-2.,-2.,0.,0.,0.,0.,0.,0.])
-    coords2 = np.array([1.,0.,0.,0.,2.,2.,0.,0.,0.,0.,0.,0.])    
+    coords1 = np.array([0.,0.,0.,1.,0.,0.,0.,0.,0.,0.,0.,0.])
+    coords2 = np.array([-1.5,-2.,0.,-1.,-2.,0.,0.,0.,0.,0.,0.,0.])    
     #print coords
     
     import pele.mindist.periodic_exact_match as pd
     a = pd.MeasurePeriodicRigid(boxl, system.aatopology)
-    b = a.get_dist(coords1, coords2)
-    print b
+   
+    b = MinPermDistBulk(boxl, a)
+    
+    print b(coords1,coords2)
     
 def test_connect():
 
     nmol = 5
-    boxl = np.array([10,10,5])
+    boxl = np.array([15,10,5])
     rcut = 2.5
     system = OTPBulk(nmol,boxl,rcut)   
 
@@ -174,19 +204,27 @@ def test_connect():
     X1 = db.minima()[0].coords
     X2 = db.minima()[1].coords
     
+    print "X1:", system.aatopology.to_atomistic(X1)
+    print "X2:", system.aatopology.to_atomistic(X2)
+    
     import pele.mindist.periodic_exact_match as md
     a = md.MeasurePeriodicRigid(boxl,system.aatopology)
+    print "initial distance:", a.get_dist(X1, X2)
+    
     b = MinPermDistBulk(boxl, a)
       
-    dist, x1, x2 = b(X1,X2)
+    dist, x1, x2 = b.match(X1,X2)#b(X1,X2)
+    print "final distance:", dist
     
-    min1, min2 = db.minima()[0], db.minima()[1]
+
+    
+    #min1, min2 = db.minima()[0], db.minima()[1]
     #from pele.landscape import ConnectManager
     #manager = ConnectManager(db, strategy="gmin")
     #for i in xrange(db.number_of_minima()-1):
     #    min1, min2 = manager.get_connect_job()
-    connect = system.get_double_ended_connect(min1, min2, db)
-    connect.connect()
+    #connect = system.get_double_ended_connect(min1, min2, db)
+    #connect.connect()
         
     #from pele.utils.disconnectivity_graph import DisconnectivityGraph, database2graph
     #import matplotlib.pyplot as plt
@@ -199,7 +237,7 @@ def test_connect():
      
 if __name__ == "__main__":
 #    test_gui()
-#    test_bh()
-    test_connect()
+    test_bh()
+#    test_connect()
 #    test_PBCs()
 #    test_mindist()
