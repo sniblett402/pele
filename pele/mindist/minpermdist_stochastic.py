@@ -2,8 +2,9 @@ import numpy as np
 from exact_match import StandardClusterAlignment
 from pele.utils import rotations     
 from _minpermdist_policies import TransformAtomicCluster, MeasureAtomicCluster
-from pele.mindist.periodic_exact_match import MeasurePeriodic,\
-    TransformPeriodic, MeasurePeriodicRigid, TransformPeriodicRigid
+#from pele.mindist.periodic_exact_match import MeasurePeriodic,\
+#    TransformPeriodic, MeasurePeriodicRigid, TransformPeriodicRigid
+from pele.mindist.periodic_exact_match import MeasurePeriodicRigid, TransformPeriodicRigid
 from pele.utils.rbtools import CoordsAdapter
 from time import ctime
 
