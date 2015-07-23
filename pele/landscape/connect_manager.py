@@ -79,6 +79,41 @@ class ConnectManagerGMin(BaseConnectManager):
             if not graph.areConnected(gmin, m):
                 if self.is_good_pair(gmin, m):
                     self.minpairs.append((gmin, m))
+                    
+class ConnectManagerCentre(BaseConnectManager):
+    """
+    return connect jobs in order to connect everything to a particular central minimum,
+    which is specified by giving a string in its user data field.
+    """
+
+    def __init__(self, database, user_data="central", list_len=10, verbosity=1):
+        self.database = database
+        self.list_len = list_len
+        self.verbosity = verbosity
+        self.user_data = user_data
+
+        self.minpairs = deque()
+
+    def _build_list(self):
+        if self.verbosity > 0:
+            print "populating list of minima not connected to the global minimum"
+        self.minpairs = deque()
+
+        central = None
+        for min in self.database.minima():
+            if(min.user_data==self.user_data):
+                central = min
+                break
+        if central is None:
+            print "Error: no central minimum supplied"
+            return
+
+        graph = TSGraph(self.database)
+
+        for m in self.database.minima()[1:]:
+            if not graph.areConnected(central, m):
+                if self.is_good_pair(central, m):
+                    self.minpairs.append((central, m))                    
 
 
 class ConnectManagerUntrap(BaseConnectManager):
@@ -310,8 +345,9 @@ class ConnectManager(object):
         self.manager_combine = ConnectManagerCombine(self.database, list_len=list_len, clust_min=4)
         self.manager_untrap = ConnectManagerUntrap(database, list_len=list_len, nlevels=untrap_nlevels)
         self.manager_gmin = ConnectManagerGMin(database, list_len=list_len, verbosity=self.verbosity)
+        self.manager_centre = ConnectManagerCentre(database, list_len=list_len, verbosity=self.verbosity)        
 
-        self.possible_strategies = ["random", "combine", "untrap", "gmin"]
+        self.possible_strategies = ["random", "combine", "untrap", "gmin", "centre"]
         self.backup_strategy = "random"
         self._check_strategy(self.backup_strategy)
         self._check_strategy(self.default_strategy)
@@ -322,7 +358,8 @@ class ConnectManager(object):
         self.manager_random.set_good_pair_test(self.untried)
         self.manager_untrap.set_good_pair_test(self.untried)
         self.manager_gmin.set_good_pair_test(self.untried)
-
+        self.manager_centre.set_good_pair_test(self.untried)
+        
     def _already_tried(self, min1, min2):
 
         if (min1, min2) in self.attempted_list:
@@ -381,6 +418,16 @@ class ConnectManager(object):
             else:
                 if self.verbosity > 0:
                     print "sending a connect job to connect all minima with the global minimum", min1.id(), min2.id()
+
+        if strategy == "centre":
+            min1, min2 = self.manager_centre.get_connect_job()
+            if min1 is None or min2 is None:
+                if self.verbosity > 0:
+                    print "couldn't find any minima not connected to the central minimum.  Doing", self.backup_strategy, "strategy instead"
+                strategy = self.backup_strategy
+            else:
+                if self.verbosity > 0:
+                    print "sending a connect job to connect all minima with the central minimum", min1.id(), min2.id()
 
         if strategy == "random":
             min1, min2 = self.manager_random.get_connect_job()
