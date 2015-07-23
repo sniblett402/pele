@@ -330,6 +330,22 @@ def _compare_properties(prop, v2):
         return np.all(v1 == v2)
     except:
         pass
+
+    # See if they are dictionaries - e.g. kwargs dicts
+    try:
+        for i in v1.keys():
+            if(not(i in v2.keys())):
+                return False  # They are both dictionaries, but are definitely different.
+            else:
+                try:
+                    if(v1[i]!=v2[i]): # Compare all dictionary entries
+                        return False
+                except ValueError: # We probably have an array: use the appropriate comparison
+                     if(not np.all(v1[i]==v2[i])):
+                        return False
+        return True # If we've got to the end of the loop then the dicts must be identical
+    except AttributeError:
+        pass   # One of v1 and v2 is not a dictionary
     
     print "warning, could not compare value", v2, "with", v1
     return False
