@@ -291,6 +291,14 @@ class BaseSystem(object):
                 max_n_minima = val
         except KeyError:
             pass
+     
+        try:
+            acceptStep = kwargs.pop("acceptStep") # The value corresponding to this key should be a list of
+                                                  # functions that will act as the acceptance test for the
+                                                  # basinhopping.
+        except KeyError:
+            acceptStep = None # If no acceptStep is specified, this will eventually be set to Metropolis.
+
         pot = self.get_potential()
         if coords is None:
             coords = self.get_random_configuration()
@@ -301,7 +309,7 @@ class BaseSystem(object):
                 database = self.create_database()
             add_minimum = database.minimum_adder(max_n_minima=max_n_minima)
         bh = basinhopping.BasinHopping(coords, pot, takestep, quench=self.get_minimizer(),
-                                       storage=add_minimum,
+                                       storage=add_minimum,acceptTest=acceptStep,
                                        **kwargs)
         return bh
 

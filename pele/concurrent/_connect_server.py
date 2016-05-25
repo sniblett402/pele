@@ -181,6 +181,8 @@ class ConnectWorker(object):
     
         while True:
             print "Obtain a new job"
+#            print "connect server is:", self.connect_server
+#            print "Strategy is ", self.strategy
             id1, coords1, id2, coords2 = self.connect_server.get_connect_job(self.strategy)
             
             print "processing connect run between minima with global id", id1, id2
@@ -278,7 +280,7 @@ class BasinhoppingWorker(object):
         self.system = system
         self.basinhopping_kwargs = basinhopping_kwargs
     
-    def run(self, nsteps=10000):
+    def run(self, nsteps=10000, **kwargs):
         """ start the client
 
         Parameters
@@ -292,7 +294,7 @@ class BasinhoppingWorker(object):
         # connect to events and forward them to server
         db.on_minimum_added.connect(self._minimum_added)
 
-        bh = self.system.get_basinhopping(database=db)
+        bh = self.system.get_basinhopping(database=db, **kwargs)
         bh.run(nsteps)
 
         print "finished successfully!"

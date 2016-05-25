@@ -6,14 +6,14 @@ from pele.storage.database import Database
 from pele.utils.disconnectivity_graph import database2graph
 from pele.utils.optim_compatibility import WritePathsampleDB
 
-def print_system_properties(db, supress_long=True):
+def print_system_properties(db, suppress_long=True):
     if len(db.properties()) == 0: return
     print "System properties:"
     print "------------------"
     for p in db.properties():
         name, value = p.name(), p.value()
         str_value = str(value)
-        if len(str_value) > 100 and supress_long:
+        if len(str_value) > 100 and suppress_long:
             str_value = str_value[:80] + " '... output suppressed'"
         print "%10s:\t\t%s" % (name, str_value)
     print ""
@@ -84,12 +84,13 @@ def main():
     
     if args.summary_long:
         args.summary = True
+    
     suppress = not args.long_output
         
     db = Database(db=args.database, createdb=False)
 
     if args.properties or args.summary:
-        print_system_properties(db,supress_long=suppress)
+        print_system_properties(db,suppress_long=suppress)
 
     if args.summary:
         print "number of minima:", db.number_of_minima()
