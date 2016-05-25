@@ -132,6 +132,9 @@ class ConnectWorker(object):
         created on the client side and passed as a parameter.
     strategy : str
         strategy to use when choosing which minima to connect
+    successful_only: bool
+        When set to True, the worker will only return minima and transition states to the server
+        on completion of a connect run, and then only if the connection was made successfully.
 
     See Also
     --------
@@ -139,7 +142,7 @@ class ConnectWorker(object):
     pele.landscape.ConnectManager
     """
     
-    def __init__(self, uri, system=None, strategy="random"):
+    def __init__(self, uri, system=None, strategy="random", successful_only=False):
         print "connecting to",uri
         self.connect_server = Pyro4.Proxy(uri)
         if system is None:
@@ -147,6 +150,8 @@ class ConnectWorker(object):
         self.system = system
         
         self.strategy = strategy
+        
+        self.successful_only = successful_only
         
     def run(self, nruns=None):
         """ start the client
@@ -166,9 +171,13 @@ class ConnectWorker(object):
         # create a local database in memory
         db = system.create_database(db=":memory:")
 
-        # connect to events and forward them to server
-        db.on_minimum_added.connect(self._minimum_added)
-        db.on_ts_added.connect(self._ts_added)
+        if not self.successful_only:
+            # connect to events and forward them to server
+            db.on_minimum_added.connect(self._minimum_added)
+            db.on_ts_added.connect(self._ts_added)
+        else:
+            db.on_minimum_added.connect(self.no_op)
+            db.on_ts_added.connect(self.no_op)
     
         while True:
             print "Obtain a new job"
@@ -184,6 +193,12 @@ class ConnectWorker(object):
             # run double ended connect
             connect = system.get_double_ended_connect(min1, min2, db, fresh_connect=True)
             connect.connect()
+            
+            if self.successful_only:
+                path = connect.returnPath(points_only=True)
+                if path is not None:
+                    self.add_successful_path(path)
+            
             if nruns is not None:
                 nruns -= 1
                 if nruns == 0: break
@@ -205,6 +220,31 @@ class ConnectWorker(object):
         id2 = self.gid[ts.minimum2]
         
         self.connect_server.add_ts(id1, id2, ts.energy, ts.coords, eigenval=ts.eigenval, eigenvec=ts.eigenvec)
+
+    def no_op(self, point):
+        """ Dummy function to do nothing when a minimum or transition state is found. Only used
+        with successful_only. """
+        pass
+    
+    def add_successful_path(self, path):
+        """ If successful_only is set, then we don't add minima and transition states to the
+        server database as they are found, but instead we add the whole path at the end of 
+        the connection job. """
+        
+        # The path consists of a series of alternating points: min-TS-min-TS-min-...-TS-min.
+        # This is equivalent to a single starting minimum followed by npairs pairs of TS-min
+        # structures.
+        npairs = (len(path)-1)/2
+        
+        self._minimum_added(path[0])
+        
+        # _ts_added requires us to have added both minima before we can add the transition state.
+        # So we have to add each pair in reverse order.
+        for i in xrange(1,npairs+1):       
+            self._minimum_added(path[2*i])
+            self._ts_added(path[2*i-1])
+        
+        
 
 class BasinhoppingWorker(object):
     """

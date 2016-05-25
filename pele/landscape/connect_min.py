@@ -492,8 +492,14 @@ class DoubleEndedConnect(object):
     def success(self):
         return self.graph.areConnected(self.minstart, self.minend)
 
-    def returnPath(self):
+    def returnPath(self, points_only=False):
         """return information about the path
+        
+        Parameters
+        ----------
+        points_only: bool
+            Save time by only calculating the sequence of minima and transition states.
+            S and energies are not returned in this case.
         
         Returns
         -------
@@ -508,7 +514,10 @@ class DoubleEndedConnect(object):
         If the minima are not connected, return (None, None, None)
         """
         if not self.graph.areConnected(self.minstart, self.minend):
-            return None, None, None
+            if points_only:
+                return None
+            else:
+                return None, None, None
         minima = nx.shortest_path(self.graph.graph, self.minstart, self.minend)
         transition_states = []
         mints = [minima[0]]
@@ -519,6 +528,9 @@ class DoubleEndedConnect(object):
             transition_states.append(ts)
             mints.append(ts)
             mints.append(m2)
+
+        if points_only:
+            return mints
 
         S = np.zeros(len(mints))
         for i in range(1, len(mints)):
