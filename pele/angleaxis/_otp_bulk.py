@@ -111,6 +111,9 @@ class OTPBulk(RBSystem):
         tssearch.lowestEigenvectorQuenchParams["nsteps"] = 50
         tssearch.iprint=1
         tssearch.nfail_max = 100
+        
+        params.takestep.rotate=0.2
+        params.takestep.translate=0.2
     
     def get_potential(self):
         """construct the rigid body potential"""
@@ -145,39 +148,50 @@ class OTPBulk(RBSystem):
 #
         
 def test_bh():  # pragma: no cover
-    np.random.seed(0)
-    nmol = 5
-    boxvec = np.array([5.,5.,5.])
-    rcut = 2.5
+    np.random.seed(367840)
+    nmol = 2
+    boxvec = np.array([1000.,1000.,1000.])
+    rcut = 2.614
     system = OTPBulk(nmol,boxvec,rcut)   
     db = system.create_database()
-    bh = system.get_basinhopping(db)   # sn402: just overload get_random_configuration() in 
-    # this file when it's time to specify the initial coordinates of OTP.
-    bh.run(100)
+    bh = system.get_basinhopping(db)
+    bh.run(1)
     m1 = db.minima()[0]
     print m1.coords
     for x in m1.coords:
         print "%.12f," % x,
     print ""
-    m2 = db.minima()[1]
-    print m2.coords
-    for x in m2.coords:
-        print "%.12f," % x,
-    print ""   
+#     m2 = db.minima()[1]
+#     print m2.coords
+#     for x in m2.coords:
+#         print "%.12f," % x,
+#     print ""   
     
     print m1.energy
-    print db.minima()[1].energy
-    print db.minima()[2].energy      
+#     print db.minima()[1].energy
+#     print db.minima()[2].energy      
  
 
 def test_gui():  # pragma: no cover
     from pele.gui import run_gui
-    nmol = 20
-    boxvec = np.array([6,6,6])
-    rcut = 2.5
-    system = OTPBulk(nmol, boxvec, rcut)
+#     nmol = 20
+#     boxvec = np.array([6,6,6])
+#     rcut = 2.5
     
-    run_gui(system)
+    nmol = 2
+    boxvec = np.array([3.,3.,3.])
+    rcut = 2.614   
+    
+    system = OTPBulk(nmol, boxvec, rcut)    
+    import math
+    coords1 = np.array([-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,0.,0.,0.,math.pi/4.,0.,0.])
+#    coords1 = np.array([0,0,0,0.60876143,-0.18699518,0.18699518,0.,0.,0.,-math.pi/4.,0.,0.])
+    x = system.aatopology.to_atomistic(coords1)
+    print x
+    db = system.create_database()
+    db.addMinimum(0, coords1)
+    
+    run_gui(system, db)
        
 def test_mindist():  # pragma: no cover
     nmol = 2
@@ -189,11 +203,13 @@ def test_mindist():  # pragma: no cover
     coords2 = np.array([1.,0.,0.,0.,2.,2.,0.,0.,0.,0.,0.,0.])    
     #print coords
     
-    import pele.angleaxis.aaperiodicttransforms as pd
-    a = pd.MeasurePeriodicRigid(boxvec, system.aatopology)
-    b = a.get_dist(coords1, coords2)
-    print b
+    system.draw(coords1, 1)
     
+#     import pele.angleaxis.aaperiodicttransforms as pd
+#     a = pd.MeasurePeriodicRigid(boxvec, system.aatopology)
+#     b = a.get_dist(coords1, coords2)
+#     print b
+
 def test_connect():  # pragma: no cover
 
     nmol = 5
@@ -227,8 +243,8 @@ def test_connect():  # pragma: no cover
     plt.show()          
 
 if __name__ == "__main__":
-     test_gui()
-#    test_bh()
+#     test_gui()
+    test_bh()
 #     test_connect()
 #    test_PBCs()
 #    test_mindist()
