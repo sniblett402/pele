@@ -43,10 +43,13 @@ class BLJBulkFrozen(BLJBulk):
     def get_permlist(self):
         """return the permutable mobile atoms"""
         # get permlist must be overloaded because the mindist functions will see the reduced set of coordinates
-        return [range(len(self.mobile_Aatoms)), range(len(self.mobile_Batoms))]
+        temp = range(len(self.mobile_Batoms))
+        for i in xrange(len(self.mobile_Batoms)):
+            temp[i]+=len(self.mobile_Aatoms)
+        return [range(len(self.mobile_Aatoms)), temp]
 
     def get_mindist(self):
-        return lambda x1, x2: optimize_permutations(x1, x2, permlist=self.get_permlist())
+        return lambda x1, x2: optimize_permutations(x1, x2, permlist=self.get_permlist(), box_lengths=self.boxvec)
 
     def get_orthogonalize_to_zero_eigenvectors(self):
         return None
@@ -101,7 +104,6 @@ class BLJBulkFrozen(BLJBulk):
         draw_atoms(full_coords, self.frozen_Batoms, radius=rB, color=cF)
         
         draw_box(self.boxvec)
-
 
 #
 # testing only below here
