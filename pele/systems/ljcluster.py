@@ -136,6 +136,13 @@ def run():  # pragma: no cover
     connect = sys.get_double_ended_connect(min1, min2, db)
     connect.connect()
 
+def rungui():
+    from pele.gui import run_gui
+
+    sys = LJCluster(31)
+    db = sys.create_database()
+    run_gui(sys, db)
 
 if __name__ == "__main__":
-    run()
+#    run()
+    rungui()
