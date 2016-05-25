@@ -105,6 +105,30 @@ class BLJBulkFrozen(BLJBulk):
         
         draw_box(self.boxvec)
 
+    def create_frozenblj_system_from_db(dbname):
+        from pele.storage import Database
+        db = Database(dbname, createdb=False)
+    
+        natoms = db.get_property("natoms").value()
+        boxvec = db.get_property("boxvec").value()
+        ntypeA = db.get_property("ntypeA").value()
+        initial_coords = db.get_property("initial_coords").value()
+        frozen = db.get_property("frozen_atoms").value()
+    
+        system = BLJBulkFrozen(natoms, boxvec, initial_coords, frozen, ntypeA=ntypeA)
+
+        # The next line is a nasty hack to avoid an odd error.
+        # When we call create_database on an exisiting database, it compares all the system properties
+        # against the ones that are saved in the database. It then commits any changes to the database,
+        # but that step seems to fail when trying to overwrite a sequence object (in this case the kwargs
+        # dictionary) with another sequence. Instead, I overwrite with a None-type object first. Then in
+        # the next command we are overwriting a None-type with a dictionary, which doesn't cause an error.
+        db.add_property("potential_kwargs",{})
+
+        db = system.create_database(dbname, createdb=False, overwrite_properties=True)
+    
+        return system, db, initial_coords
+
 #
 # testing only below here
 #
