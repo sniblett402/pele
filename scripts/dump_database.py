@@ -77,15 +77,19 @@ def main():
     parser.add_argument("-S",
                       dest="summary_long", action="store_true",
                       help="print long summary")
+    parser.add_argument("-l",
+                      dest="long_output", action="store_true",
+                      help="Allow long output to be printed")
     args = parser.parse_args()
     
     if args.summary_long:
         args.summary = True
+    suppress = not args.long_output
         
     db = Database(db=args.database, createdb=False)
 
     if args.properties or args.summary:
-        print_system_properties(db)
+        print_system_properties(db,supress_long=suppress)
 
     if args.summary:
         print "number of minima:", db.number_of_minima()

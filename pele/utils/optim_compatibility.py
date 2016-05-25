@@ -371,7 +371,7 @@ class OptimDBConverter(object):
 
 class WritePathsampleDB(object):
     """
-    converts PATHSAMPLE to pele database
+    converts pele database to PATHSAMPLE
 
     Parameters
     ----------
@@ -415,13 +415,15 @@ class WritePathsampleDB(object):
 
     def __init__(self, database, mindata="min.data",
                  tsdata="ts.data", pointsmin="points.min", pointsts="points.ts",
-                 endianness="=", assert_coords=True):
+                 endianness="=", assert_coords=True, aatopology=None):
         self.db = database
         self.mindata = mindata
         self.tsdata = tsdata
         self.pointsmin = pointsmin
         self.pointsts = pointsts
         self.endianness = endianness
+
+        self.aatopology=aatopology # sn402: Added to allow conversion of angle-axis databases
     
     def write_min_data_ts_data(self):
 
@@ -445,8 +447,11 @@ class WritePathsampleDB(object):
                     data_out.write("{} {} {} 1 1 1\n".format(m.energy,
                                                               fvib,
                                                               pgorder))
-                    write_points_min_ts(point_out, m.coords, endianness=self.endianness)
-        
+                    if self.aatopology is None:
+                        write_points_min_ts(point_out, m.coords, endianness=self.endianness)
+                    else:
+                        write_points_min_ts(point_out, self.aatopology.to_atomistic(m.coords), endianness=self.endianness)
+
         del m
         
         # write trasnition_states ordered by energy
@@ -469,8 +474,10 @@ class WritePathsampleDB(object):
                     data_out.write("{energy} {fvib} {pgorder} {min1} {min2} 1 1 1\n".format(
                         energy=ts.energy, fvib=fvib, pgorder=pgorder, 
                         min1=m1_label, min2=m2_label))
-                    write_points_min_ts(point_out, ts.coords, endianness=self.endianness)
-        
+                    if self.aatopology is None:
+                        write_points_min_ts(point_out, ts.coords, endianness=self.endianness)
+                    else:
+                        write_points_min_ts(point_out, self.aatopology.to_atomistic(ts.coords), endianness=self.endianness)
         
     
     def write_db(self):
