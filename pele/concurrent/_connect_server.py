@@ -1,9 +1,9 @@
 import Pyro4
 
 from pele.landscape import ConnectManager
+import playground.parallel_tempering.bhpt as parallel
 
-
-__all__ = ["ConnectServer", "ConnectWorker", "BasinhoppingWorker"]
+__all__ = ["ConnectServer", "ConnectWorker", "BasinhoppingWorker", "BHPTWorker"]
 
 # we need to run pyros in multiplex mode, otherwise we run into problems with 
 # SQLAlchemy. This is due to the fact that a session can only be used from one
@@ -47,6 +47,10 @@ class ConnectServer(object):
         self.port=port
         
         self.connect_manager = ConnectManager(self.db)
+        print "Connect manager set up. server_name, host, port:"
+        print self.server_name
+        print self.host
+        print self.port
 
     def set_connect_manager(self, connect_manager):
         """add a custom connect manager
@@ -145,6 +149,7 @@ class ConnectWorker(object):
     def __init__(self, uri, system=None, strategy="random", successful_only=False):
         print "connecting to",uri
         self.connect_server = Pyro4.Proxy(uri)
+        print self.connect_server
         if system is None:
             system = self.connect_server.get_system()
         self.system = system
@@ -272,13 +277,16 @@ class BasinhoppingWorker(object):
     pele.Basinhopping
     """
     
-    def __init__(self,uri, system=None, **basinhopping_kwargs):
+    def __init__(self,uri, system=None, maxE=None, **basinhopping_kwargs):
         print "connecting to",uri
         self.connect_server = Pyro4.Proxy(uri)
+        print "Connected to ", self.connect_server
         if system is None:
             system = self.connect_server.get_system()
+#            print "Fetched system from server:", system
         self.system = system
         self.basinhopping_kwargs = basinhopping_kwargs
+        self.maxE = maxE
     
     def run(self, nsteps=10000, **kwargs):
         """ start the client
@@ -292,7 +300,10 @@ class BasinhoppingWorker(object):
         db = self.system.create_database(db=":memory:", **self.basinhopping_kwargs)
 
         # connect to events and forward them to server
-        db.on_minimum_added.connect(self._minimum_added)
+        if self.maxE is None:
+            db.on_minimum_added.connect(self._minimum_added)
+        else:
+            db.on_minimum_added.connect(self._minimum_added_maxE)
 
         bh = self.system.get_basinhopping(database=db, **kwargs)
         bh.run(nsteps)
@@ -304,3 +315,88 @@ class BasinhoppingWorker(object):
         """forward new minimum to server"""
         self.connect_server.add_minimum(minimum.energy, minimum.coords)
    
+    def _minimum_added_maxE(self, minimum):
+        """forward new minimum to server, provided its energy is less than the specified maximum"""
+        if minimum.energy<self.maxE:
+            self.connect_server.add_minimum(minimum.energy, minimum.coords)
+
+class BHPTWorker(BasinhoppingWorker):
+    """
+    worker class to execute parallel tempering basinhopping runs in parallel
+
+    The worker will return all new minima to the server.
+
+    Parameters
+    ----------
+    uri : string
+        uri for job server
+    system : BaseSystem, optional
+        if no system class is specified, the worker obtains the system
+        class from the ConnectServer by get_system. This only works for pickleable
+        systems classes. If this is not the case, the system class can be
+        created on the client side and passed as a parameter.
+
+    See Also
+    --------
+    ConnectServer
+    pele.Basinhopping
+    BasinhoppingWorker
+    """
+        
+    def run(self, nsteps=10000, exchange_frq=10, alwaysaccept=False, **kwargs):
+        """ start the client
+
+        Parameters
+        ----------
+        nsteps : integer
+            number of basinhopping iterations
+        """
+        # create a local database in memory
+        db = self.system.create_database(db=":memory:", **self.basinhopping_kwargs)
+        print "local database created:", db
+
+        # connect to events and forward them to server
+        if self.maxE is None:
+            db.on_minimum_added.connect(self._minimum_added)
+        else:
+            db.on_minimum_added.connect(self._minimum_added_maxE)
+
+#        print "Before update, kwargs.keys():"
+#        print kwargs.keys()
+        tmp = self.system.params["basinhopping"].copy()
+        tmp.update(kwargs)
+        kwargs = tmp
+#        print "After update:"
+#        print kwargs.keys()
+
+        pot = self.system.get_potential()
+
+        coords = self.interrogate_kwargs(kwargs, "coords", self.system.get_random_configuration())
+        takestep = self.interrogate_kwargs(kwargs, "takestep", self.system.get_takestep())
+        quench = self.interrogate_kwargs(kwargs, "quench", self.system.get_minimizer())
+        acceptStep = self.interrogate_kwargs(kwargs, "acceptStep", None)
+
+        add_minimum = self.interrogate_kwargs(kwargs, "add_minimum", db.minimum_adder())
+
+#        print "kwargs being passed in ", kwargs
+
+        if alwaysaccept:
+            bhpt = parallel.BHPT_always_accept(coords, pot, takestep, exchange_frq=exchange_frq, storage=add_minimum, 
+                                               acceptTests=acceptStep, quenchRoutine=quench, **kwargs)
+        else:
+            bhpt = parallel.BHPT(coords, pot, takestep, exchange_frq=exchange_frq, storage=add_minimum, 
+                                 acceptTests=acceptStep, quenchRoutine=quench, **kwargs)
+        bhpt.run(nsteps)
+
+        print "finished successfully!"
+        print "minima found:", db.number_of_minima()
+   
+    def interrogate_kwargs(self, kwargs, key, value_if_not_specified):
+        try:
+            toReturn = kwargs[key]
+            print "Using keyword value for key ", key
+            del kwargs[key]
+            return toReturn
+        except KeyError:
+            print "Using newly generated value for key", key
+            return value_if_not_specified

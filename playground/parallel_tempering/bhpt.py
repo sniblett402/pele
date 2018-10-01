@@ -2,11 +2,13 @@
 import numpy as np
 import scipy
 from math import *
-import accept_tests.metropolis as metropolis
+import pele.accept_tests.metropolis as metropolis
 import copy
-from optimize import mylbfgs
-import basinhopping as bh
-
+from pele.optimize import mylbfgs
+import pele.basinhopping as bh
+from joblib import Parallel, delayed
+import dill as pickle
+from pele.storage import Database
 
 class BHPT:
     """A class to run the basin hopping algorithm
@@ -52,8 +54,9 @@ class BHPT:
             acceptTests=[],  \
             nometropolis=False, \
             quenchRoutine = mylbfgs, \
-            Tmin = 1., Tmax = 1.2, nreplicas = 4 \
-            ):
+            Tmin = 1., Tmax = 1.2, nreplicas = 4, \
+            exchange_frq = 10, \
+            accept_scale = 1.0 ):
         #note: make a local copy of lists of events so that an inputted list is not modified.
         self.coords = coords
         self.storage = storage
@@ -65,7 +68,8 @@ class BHPT:
         self.quenchRoutine = quenchRoutine
 
         self.nreplicas = nreplicas
-        self.exchange_frq = 10
+        self.exchange_frq = exchange_frq
+        self.scale = accept_scale
 
         #set up the temperatures
         #distribute them exponentially
@@ -92,12 +96,15 @@ class BHPT:
         self.replicas = []
         for i in range(self.nreplicas):
             T = self.Tlist[i]
-            replica = bh.BasinHopping( self.coords, self.potential, self.takeStep, temperature = T, outstream = self.streams[i])
+            replica = bh.BasinHopping( self.coords, self.potential, self.takeStep, 
+	            temperature = T, storage=self.storage, quench=self.quenchRoutine, 
+	            acceptTest=self.acceptTests, outstream = self.streams[i])
             self.replicas.append( replica )
 
     def run(self, nsteps):
 
         for istep in xrange(nsteps/self.exchange_frq):
+#            print "Starting istep ", istep
             for rep in self.replicas:
                 rep.run( self.exchange_frq )
             self.tryExchange()
@@ -107,7 +114,8 @@ class BHPT:
         print "trying exchange", k, k+1
         deltaE = self.replicas[k].markovE - self.replicas[k+1].markovE
         deltabeta = 1./self.replicas[k].temperature - 1./self.replicas[k+1].temperature
-        w = min( 1. , np.exp( deltaE * deltabeta ) )
+        print "temperatures, energies", self.replicas[k].temperature, self.replicas[k+1].temperature, self.replicas[k].markovE, self.replicas[k+1].markovE
+        w = min( 1. , np.exp( deltaE * deltabeta )*self.scale )
         rand = np.random.rand()
         if w > rand:
             #accept step
@@ -120,3 +128,36 @@ class BHPT:
             self.replicas[k+1].coords = coords1
         else:
             print "rejecting exchange ", k, k+1, w, rand
+
+##### This can probably be deleted if we implement the nometropolis option which is mentioned in the docstring for BHPT... #####
+class BHPT_always_accept(BHPT):
+    """ A special case where we ignore the acceptance test and always accept the proposed exchange.
+    This is probably only useful in the case of two replicas with very occasional exchanges. """
+    def tryExchange(self):
+        k = np.random.random_integers( 0, self.nreplicas - 2)
+
+        print "accepting exchange ", k, k+1
+        E1 = self.replicas[k].markovE
+        coords1 = copy.copy( self.replicas[k].coords )
+        self.replicas[k].markovE = self.replicas[k+1].markovE 
+        self.replicas[k].coords = copy.copy( self.replicas[k+1].coords )
+        self.replicas[k+1].markovE = E1
+        self.replicas[k+1].coords = coords1
+
+def run_replica(rep, nsteps):
+    print "Running replica ", rep, "for ", nsteps, "steps"
+    rep.run(nsteps)
+
+class BHPT_parallelised(BHPT):
+    """ An attempt to allow a BHPT calculation that is genuinely parallel, across multiple cores.
+        Unfortunately, I couldn't get it working on my machine. You are welcome to have a go yourself!"""
+    def run(self, nsteps):
+        with Parallel(n_jobs=self.nreplicas) as parallel:
+            for istep in xrange(nsteps/self.exchange_frq):
+                print "Starting istep ", istep
+
+                # This is currently not working because joblist requires all the information to be pickleable, and
+                # we can't pickle the sqlalchemy session in rep's storage database. Not even using dill.
+                parallel(delayed(run_replica)(rep, self.exchange_frq) for rep in self.replicas)
+
+                self.tryExchange()
