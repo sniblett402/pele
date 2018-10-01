@@ -28,6 +28,7 @@ binary data.  If your coordinates are garbage, try changing the endianness.
     parser.add_argument('--Pointsmin','-p', help = 'Name of points.min file', type = str, default="points.min")
     parser.add_argument('--Pointsts','-q', help = 'Name of points.ts file', type = str, default="points.ts")
     parser.add_argument('--endianness', help = 'set the endianness of the binary data.  Can be "<" for little-endian or ">" for big-endian', type = str, default="=")
+    parser.add_argument('--nopoints', help = 'Load the metadata for minima and transition states without reading the coordinates (usually to save storage space)', action = 'store_true')
     args = parser.parse_args()
     
     db = Database(args.Database)
@@ -38,7 +39,10 @@ binary data.  If your coordinates are garbage, try changing the endianness.
 
     cv.setAccuracy()
      
-    cv.convert()
+    if args.nopoints:
+        cv.convert_no_coords()
+    else:
+        cv.convert()
     cv.db.session.commit()
 
 

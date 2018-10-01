@@ -50,8 +50,8 @@ def long_summary(db):
         else:
             print "%7d connected clusters of size %7d: minimum energy = %s" % (count, n, minimum_energy[n]) 
 
-def write_pathsample_db(db):
-    writer = WritePathsampleDB(db)
+def write_pathsample_db(db, write_points=True):
+    writer = WritePathsampleDB(db, write_points=write_points)
     writer.write_db()
 
 def main():
@@ -62,9 +62,13 @@ def main():
     parser.add_argument("--write-pathsample-db",
                       dest="write_pathsample", action="store_true",
                       help="generate a pathsample database by writing files min.data, ts.data, points.min, and points.ts")
+    parser.add_argument("--write-dummy-db",
+                      dest="write_pathsample_dummy", action="store_true",
+                      help="generate a pathsample database without the points files - min.data and ts.data only")
     parser.add_argument("-m",
                       dest="writeMinima", action="store_true",
                       help="dump minima to screen")
+    parser.add_argument("--minimum", type=int, default=0, help="print the coordinates of a particular minimum to the screen")
     parser.add_argument("-t",
                       dest="writeTS", action="store_true",
                       help="dump transition states to screen")
@@ -99,6 +103,12 @@ def main():
     if args.summary_long:
         long_summary(db)
         
+    if args.minimum > 0:
+       m = db.getMinimum(args.minimum)
+       print m.energy, m._id
+       x = m.coords.reshape(-1,3)
+       print x
+
     if args.writeMinima:
         print "List of minima: energy id fvib pgorder"
         print "---------------"
@@ -116,6 +126,8 @@ def main():
 
     if args.write_pathsample:
         write_pathsample_db(db)
+    elif args.write_pathsample_dummy:
+        write_pathsample_db(db, False)
         
 
 
