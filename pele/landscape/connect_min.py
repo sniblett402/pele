@@ -11,7 +11,6 @@ __all__ = ["DoubleEndedConnect"]
 
 logger = logging.getLogger("pele.connect")
 
-
 class DoubleEndedConnect(object):
     """
     Find a connected network of minima and transition states between min1 and min2
@@ -481,7 +480,12 @@ class DoubleEndedConnect(object):
             except LineSearchError as err:
                 print err
                 print "caught line search error, aborting connection attempt"
-                break
+                # sn402: changed "break" to "continue" here.
+                # If a connection attempt is completely disastrous and we always get a LineSearchError, this change will mean that failures
+                # are reported more slowly. However, it gives us another chance to find a connection if the LineSearchError is not a recurring
+                # problem.
+#                break
+                continue
 
             if False and i % 10 == 0:
                 # do some sanity checks
