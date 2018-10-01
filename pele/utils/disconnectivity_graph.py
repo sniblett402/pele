@@ -483,10 +483,10 @@ class ColorDGraphByValue(object):
         if colormap is None:
             from matplotlib import cm
 
-            self.colormap = cm.get_cmap("winter")
+            self.colormap = cm.get_cmap("nipy_spectral") # originally "winter"
         else:
             self.colormap = colormap
-
+        print "got colour map"
         self._tree_to_value = dict()
 
         if normalize_values:
@@ -534,7 +534,6 @@ class ColorDGraphByValue(object):
             value = self.tree_get_value(tree)
             if value is not None:
                 tree.data["colour"] = self.value_to_color(value)
-
 
 class DisconnectivityGraph(object):
     """
@@ -630,7 +629,7 @@ class DisconnectivityGraph(object):
         self.get_value = order_by_value
         if self.center_gmin:
             include_gmin = True
-
+        
         if minima is None:
             minima = []
         self.min0list = minima
@@ -643,7 +642,7 @@ class DisconnectivityGraph(object):
         # print "min0", self.min0.energy, self.min0.id()
         self.transition_states = nx.get_edge_attributes(self.graph, "ts")
         self.tree_list = [[] for _ in range(self.nlevels)]
-
+ 
     def _getEnergy(self, node):
         """ get the energy of a node """
         return getattr(node, self.energy_attribute)
@@ -1121,18 +1120,22 @@ class DisconnectivityGraph(object):
                                      normalize_values=normalize_values)
         colorer.run()
 
-    def draw_minima(self, minima, axes=None, **kwargs):
+    def draw_minima(self, minima, axes=None, labels=False, **kwargs):
         """draw a specified list of minima as points
         
         minima : list of minima
         axes : matlplotlib axes
             Draw them on these axes.  If None, use self.axes.
+        labels : bool
+            If True, the disconnectivity graph will be annotated with the IDs of the minima being marked on.
         kwargs : kwargs
             additional keyword arguments will be passed to matplolib.Axes.scatter().
             Use this to specify how to draw the points.
         """
+        print "In draw_minima, labels=",labels
         if axes is None:
             axes = self.axes
+        print "axes:", axes
 
         if "marker" not in kwargs:
             kwargs["marker"] = "o"
@@ -1140,13 +1143,22 @@ class DisconnectivityGraph(object):
         xpos, minlist = self.get_minima_layout()
         m2dist = dict((izip(minlist, xpos)))
 
-        minima = list(minima)
+        minima = [m for m in minima if m in m2dist.keys()]
+        print "len(minima):", len(minima)
         xpos = [m2dist[m] for m in minima]
         energies = [m.energy for m in minima]
 
+        if labels:
+            for m in xrange(len(minima)):
+                axes.annotate(str(minima[m].id()),(xpos[m],energies[m]-0.1))
+                print "Annotating minimum ", str(minima[m].id()), "at position ", xpos[m],energies[m]-0.1
+#            label_dict = {}
+#            for m in xrange(len(minima)):
+#                label_dict[m] = str(m.id())
+
         axes.scatter(xpos, energies, **kwargs)
 
-    def plot(self, show_minima=False, show_trees=False, linewidth=0.5, axes=None,
+    def plot(self, show_minima=False, show_trees=False, linewidth=0.5, label_minima=[], axes=None,
              title=None):
         """draw the disconnectivity graph using matplotlib
         
