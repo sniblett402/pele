@@ -12,7 +12,6 @@ from pele.thermodynamics import logproduct_freq2, normalmodes
 
 __all__ = ["BaseParameters", "Parameters", "dict_copy_update", "BaseSystem"]
 
-
 class BaseParameters(dict):
     """define a dictionary who's values can be accessed like attributes
     

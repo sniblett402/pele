@@ -94,16 +94,14 @@
       do i=0,n
          first(i+1) = i*m + 1
       enddo
-   
       if(m .eq. n) then
 !     Compute the full matrix...
-
          do i=1,n
             k = first(i)-1
             do j=1,n
                cc(k+j) = int(permdist(p(3*i-2), q(3*j-2), s, pbc)*scale, 8)
                kk(k+j) = j
-!              write(*,*) i, j, '-->', cc(k+j)
+!              !write(*,*) i, j, '-->', cc(k+j)
             enddo
          enddo
       else
@@ -170,8 +168,7 @@
 !       PRINT '(A,I6,A)','atom ',i,' nearest neighbours and distances:'
 !       PRINT '(20I6)',kk(m*(i-1)+1:m*i)
 !       PRINT '(12I15)',cc(m*(i-1)+1:m*i)
-           
-        enddo    
+        enddo
 !
 ! Create and maintain an ordered list, smallest to largest from kk(m*(i-1)+1:m*i) for atom i.
 ! NOTE that there is no symmetry with respect to exchange of I and J!
@@ -202,10 +199,8 @@
 !              ENDDO
 !           ENDDO
       ENDIF
-
 !     Call bipartite matching routine
       call jovosap(n8, sz8, cc, kk, first, x, y, u, v, h)
-
       if(h .lt. 0) then
 !     If initial guess correct, deduce solution distance
 !     which is not done in jovosap
@@ -213,7 +208,7 @@
          do i=1,n
             j = first(i)
  30         IF (J.GT.N*MAXNEI) THEN
-!              PRINT '(A,I6,A)','minperm> WARNING A - matching failed'
+               PRINT '(A,I6,A)','minperm> WARNING A - matching failed'
                do J1=1,n
                   perm(J1)=J1
                enddo
@@ -226,7 +221,6 @@
             h = h + cc(j)
          enddo
       endif
-
       do i=1,n
          perm(i) = x(i)
          IF (PERM(I).GT.N) PERM(I)=N
@@ -246,7 +240,6 @@
       ENDDO
       WORSTDIST=SQRT(WORSTDIST)
       WORSTRADIUS=MAX(SQRT(WORSTRADIUS),1.0D0)
-
       end
       
 !     permdist is the distance or weight function. It is coded
@@ -340,7 +333,6 @@
 !  If Y(:) is initialised to zero then we see segmentation faults if 
 !  a Y element is unset, etc.
 !
-
       Y(1:N) = 0
       X(1:N) = 0
       TODO(1:N)=0
@@ -422,7 +414,7 @@
         V(J0)=V(J0)-VJ+V0
       ELSE
          if (j1 .lt. 0) then
-            write(*,*) "error j1 is being used uninitialized"
+            write(*,*) "minperm> error j1 is being used uninitialized"
             stop
          endif
         IF (I0.EQ.0) GOTO 43

@@ -92,6 +92,7 @@ class LBFGS(object):
                  energy=None, gradient=None, armijo=False,
                  armijo_c=1e-4,
                  fortran=False):
+
         X = X.copy()
         self.X = X
         self.N = len(X)

@@ -68,4 +68,4 @@ class AdaptiveStepsize(TakestepInterface):
         self.nsteps = 0
         self.naccepted = 0
         if self.verbose:
-            print "accrat was ", rat, "new stepsize is ", self.stepclass.stepsize, "f is", self.factor        
+            print "#accrat was ", rat, "new stepsize is ", self.stepclass.stepsize, "f is", self.factor        
