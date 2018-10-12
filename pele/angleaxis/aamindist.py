@@ -104,7 +104,12 @@ class MeasureAngleAxisCluster(MeasurePolicy):
         
         # js850> note: this makes the c++ topology mandatory.  If we want we can make it optional
         # by catching any failure and setting cpp_transform to None
-        self.cpp_measure = _cpp_aa.cdefMeasureAngleAxisCluster(self.topology)
+        # sn402: I've done this as a temporary fix because I don't actually need the measure, 
+        # I'm just trying to avoid the error. Remove the try/except statements in future!
+        try:
+            self.cpp_measure = _cpp_aa.cdefMeasureAngleAxisCluster(self.topology)
+        except:
+            self.cpp_measure = None
         
     def get_com(self, X):
         """return the center of mass"""

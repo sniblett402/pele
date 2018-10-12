@@ -160,20 +160,31 @@ def create_frozenblj_system_from_db(dbname):
 
 def rungui():  # pragma: no cover
     from pele.gui import run_gui
+    import random
+    import math
 
-    natoms = 40
-    boxl = 3.
+    natoms = 256
+    boxl = 6.2
+    c = 0.10
     boxvec = np.ones(3) * boxl
     fsys = BLJBulk(natoms, boxvec)
     # system = MorseCluster(natoms, rho=1.6047, r0=2.8970, A=0.7102, rcut=9.5)
     reference_coords = fsys.get_random_configuration()
-    frozen_atoms = [0, 2, 3, 4, natoms-1]
+#    frozen_atoms = [0, 2, 3, 4, natoms-1]
+    frozen_atoms = random.sample(xrange(natoms),int(math.floor(c*natoms)))
 
     system = BLJBulkFrozen(natoms, boxvec, reference_coords, frozen_atoms)
     print system.ntypeA
     db = system.create_database()
     run_gui(system, db)
 
+def rungui_from_db(dbname):
+    from pele.gui import run_gui
+
+    system, db, x0 = create_frozenblj_system_from_db(dbname)
+    run_gui(system, db)
 
 if __name__ == "__main__":
-    rungui()
+#    rungui()
+    import sys
+    rungui_from_db(sys.argv[1])

@@ -78,7 +78,7 @@ class MolAtomIndexParser(object):
 #            grad += g
 #        return etot, grad.ravel()
 
-def make_triangular_plate(atoms_per_side=8):
+def make_triangular_plate(atoms_per_side=10):
     """construct a single triangular plate
     """
     theta = 60. * np.pi / 180.
@@ -226,7 +226,8 @@ class PlateFolder(RBSystem):
         for i in xrange(self.nrigid):
             self.extra_atoms += parser.get_atom_indices(i, OTHER_TYPE)
         
-        plate_pot = PlatePotential(harmonic_atoms1, harmonic_atoms2, lj_atoms, k=10)
+        plate_pot = PlatePotential(harmonic_atoms1, harmonic_atoms2, lj_atoms, 
+                                   k=10.0, LJeps=4., WCAeps=1.)
         # wrap it so it can be used with angle axis coordinates
         pot = RBPotentialWrapper(self.aatopology.cpp_topology, plate_pot)
 #            self.aasystem.set_cpp_topology(self.pot.topology)
@@ -249,7 +250,7 @@ class PlateFolder(RBSystem):
         return MinPermDistAACluster(self.aasystem, measure=measure, transform=transform, 
                                     accuracy=0.1, **kwargs)
 
-    
+   
     def draw(self, rbcoords, index, shift_com=True): # pragma: no cover
         from pele.systems._opengl_tools import draw_atoms, draw_cylinder
         from matplotlib.colors import cnames, hex2color
@@ -288,15 +289,25 @@ def test_bh():
     print ""
     print m1.energy
     
-
+def test_min():
+    nmol = 4 
+    system = PlateFolder(nmol)
+    db = system.create_database("tetrahedra.sqlite")
+    
+    coords= db.get_lowest_energy_minimum().coords
+    pot = system.get_potential()
+    print "Energy: ", pot.getEnergy(coords)
+    
 def test_gui():
     from pele.gui import run_gui
     nmol = 4
     system = PlateFolder(nmol)
     db = system.create_database("tetrahedra.sqlite")
     run_gui(system, db)
+#     run_gui(system)
     
 if __name__ == "__main__":
     test_gui()
+#     test_min()
 #    test_bh()
 

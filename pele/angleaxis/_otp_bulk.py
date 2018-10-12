@@ -174,24 +174,18 @@ def test_bh():  # pragma: no cover
 
 def test_gui():  # pragma: no cover
     from pele.gui import run_gui
-#     nmol = 20
-#     boxvec = np.array([6,6,6])
-#     rcut = 2.5
     
-    nmol = 2
-    boxvec = np.array([3.,3.,3.])
+    nmol = 324
+    boxvec = np.ones(3)*10.06355661335453
     rcut = 2.614   
     
     system = OTPBulk(nmol, boxvec, rcut)    
-    import math
-    coords1 = np.array([-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,0.,0.,0.,math.pi/4.,0.,0.])
-#    coords1 = np.array([0,0,0,0.60876143,-0.18699518,0.18699518,0.,0.,0.,-math.pi/4.,0.,0.])
-    x = system.aatopology.to_atomistic(coords1)
-    print x
-    db = system.create_database()
-    db.addMinimum(0, coords1)
+    run_gui(system)
+
+#    db = system.create_database()
+#    db.addMinimum(0, coords1)
     
-    run_gui(system, db)
+#    run_gui(system, db)
        
 def test_mindist():  # pragma: no cover
     nmol = 2
@@ -243,8 +237,8 @@ def test_connect():  # pragma: no cover
     plt.show()          
 
 if __name__ == "__main__":
-#     test_gui()
-    test_bh()
+    test_gui()
+#    test_bh()
 #     test_connect()
 #    test_PBCs()
 #    test_mindist()

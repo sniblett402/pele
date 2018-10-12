@@ -157,6 +157,7 @@ class RBSystem(AASystem):
                 atom_types = self.atom_types
             else:
                 atom_types = ["O"]
+
             atom_coords = self.aasystem.to_atomistic(coords)
             write_xyz(f, atom_coords, title=oname, atomtypes=atom_types)
         f.flush()

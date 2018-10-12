@@ -19,6 +19,9 @@ def main():
     elif args.system=="otp":
         from pele.pele.angleaxis._otp_cluster import OTPCluster
         system = OTPCluster(args.nmol)
+    elif args.system=="tip4p":
+        import playground
+        system = playground.gmin_tip4p.tip4p_system.TIP4pSystem()
     else:
         raise AttributeError("Unknown system type specified.")
 

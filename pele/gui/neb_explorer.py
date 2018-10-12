@@ -68,7 +68,7 @@ class NEBRunner(object):
     def create_neb(self, coords1, coords2):
         """setup the NEB object"""
         system = self.system
-        
+        print "in create_neb"
         throwaway_db = Database()
         min1 = throwaway_db.addMinimum(0., coords1)
         min2 = throwaway_db.addMinimum(1., coords2)

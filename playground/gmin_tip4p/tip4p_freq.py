@@ -5,15 +5,18 @@ from pele.utils import rotations
 import numpy as np
 from pele.mindist import PointGroupOrderCluster
 from pele.angleaxis import ExactMatchAACluster
+import pele.storage.database as DB
 
 system = TIP4PSystem()
-db = system.create_database(db="tip4p_8.sqlite")
+#db = system.create_database(db="tip4p_8.sqlite",)
+db = DB.Database(db="tip4p_8.sqlite", createdb=False)
 pot = system.get_potential()
 transform = TransformAngleAxisCluster(system.aasystem)
 coords = db.minima()[0].coords
 #coords = db.transition_states()[0].coords
 energy = pot.getEnergy(coords)
 #coords = np.loadtxt("2.txt").flatten()
+print "global minimum energy"
 print energy
 
 match = ExactMatchAACluster(system.aasystem)
@@ -25,11 +28,14 @@ metric = system.aasystem.metric_tensor(coords)
 
 print get_pgorder(coords)
 frq = normalmode_frequencies(hess, metric)
+print "Frequencies"
 print frq
 fvib = logproduct_freq2(frq, 6)[1]
+print "Log product of positive frequencies"
 print fvib
 
 beta = 1./2.479
+print "log products and temperature-weighted log products for other minima in the database"
 for m in db.minima():
     hess = pot.NumericalHessian(m.coords, eps=1e-5)
     metric = system.aasystem.metric_tensor(m.coords)
@@ -37,7 +43,7 @@ for m in db.minima():
     pgorder =  get_pgorder(m.coords)
     frq = normalmode_frequencies(hess, metric, eps=1e-3)
     fvib = logproduct_freq2(frq, 6, eps=1e-3)[1]
-    print fvib, 0.5*fvib /beta 
+    print m.id(), fvib, 0.5*fvib /beta 
     m.pgorder = pgorder
     m.fvib = fvib 
 

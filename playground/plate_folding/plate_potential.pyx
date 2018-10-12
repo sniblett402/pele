@@ -42,7 +42,7 @@ cdef extern from "pele/harmonic.h" namespace "pele":
 cdef class PlatePotential(BasePotential):
     """define the python interface to the c++ implementation
     """
-    def __cinit__(self, harmonic_atoms1, harmonic_atoms2, lj_atoms, k=1.):
+    def __cinit__(self, harmonic_atoms1, harmonic_atoms2, lj_atoms, k=1., LJeps=4., WCAeps=1.):
         assert harmonic_atoms1.size == harmonic_atoms2.size
         harmonic_nlist = np.zeros([harmonic_atoms1.size, 2])
         harmonic_nlist[:,0] = harmonic_atoms1
@@ -74,8 +74,8 @@ cdef class PlatePotential(BasePotential):
                                                   ))
         
         # add the potential for the lj
-        cdef double c6 =  4.
-        cdef double c12 = 4.
+        cdef double c6 =  LJeps
+        cdef double c12 = LJeps
         cdef double rcut = 100.
         combpot.add_potential(shared_ptr[_pele.cBasePotential]( <_pele.cBasePotential*>new 
                                    cLJCutAtomlist(c6, c12, rcut, p_lj_atoms
@@ -83,7 +83,7 @@ cdef class PlatePotential(BasePotential):
         
         # add the WCA potential
         combpot.add_potential(shared_ptr[_pele.cBasePotential]( <_pele.cBasePotential*>new 
-                                   cWCA(1., 1.)))
+                                   cWCA(1., WCAeps)))
 
         
         # save the combined potential in the format of a shared_ptr as self.thisptr

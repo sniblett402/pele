@@ -106,7 +106,7 @@ class ExactMatchPeriodic(object):
         self.accuracy = accuracy
     
     def __call__(self, x1, x2):
-
+        print "Calling periodic_exact_match"
         x1 = x1.reshape(-1,3)
         x2 = x2.reshape(-1,3)
         x2_init = x2.copy()

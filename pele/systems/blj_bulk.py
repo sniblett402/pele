@@ -19,6 +19,11 @@ class BLJBulk(BLJCluster):
 
         self.params.double_ended_connect.local_connect_params.NEBparams.interpolator = InterpolateLinearMeasure(MeasurePeriodic(self.boxvec))
 
+        # sn402: temporary! Delete these!
+#         self.params.double_ended_connect.local_connect_params.NEBparams.verbose=1
+# #        self.params.double_ended_connect.local_connect_params.NEBparams.adjustk_freq=10
+#         self.params.double_ended_connect.local_connect_params.NEBparams.iter_density=20
+
     def get_random_configuration(self):
         x = np.zeros([self.natoms, 3])
         for i in range(3):
@@ -83,8 +88,8 @@ def create_BLJ_system_from_db(dbname):
 def rungui():  # pragma: no cover
     from pele.gui import run_gui
 
-    natoms = 17
-    boxl = 2.
+    natoms = 256
+    boxl = 6.
     boxvec = np.ones(3) * boxl
     # system = MorseCluster(natoms, rho=1.6047, r0=2.8970, A=0.7102, rcut=9.5)
     system = BLJBulk(natoms, boxvec)

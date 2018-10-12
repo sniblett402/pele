@@ -86,12 +86,13 @@ class OTPCluster(RBSystem):
     
 
 def test_bh():
-    np.random.seed(0)
-    nmol = 10
+#     from time import time
+    np.random.seed(123)
+    nmol = 2
     system = OTPCluster(nmol)
     db = system.create_database()
     bh = system.get_basinhopping(db)
-    bh.run(100)
+    bh.run(10000)
     m1 = db.minima()[0]
     print m1.coords
     for x in m1.coords:
@@ -102,11 +103,11 @@ def test_bh():
 
 def test_gui():
     from pele.gui import run_gui
-    nmol = 5
+    nmol = 10
     system = OTPCluster(nmol)
     
     run_gui(system)
     
 if __name__ == "__main__":
     test_gui()
-#    test_bh()
+#     test_bh()

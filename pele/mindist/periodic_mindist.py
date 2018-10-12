@@ -1,6 +1,7 @@
 import numpy as np
 from pele.mindist.periodic_exact_match import TransformPeriodic
 from inspect import stack
+from pele.mindist.permutational_alignment import optimize_permutations
 
 class MinDistBulk(object):
     """ Obtain the best alignment between two configurations of a periodic system"""
@@ -57,3 +58,26 @@ class MinDistBulk(object):
         # Calculate the periodic distance between the two structures
         dist = self.measure.get_dist(x1, best_x2)
         return dist, best_x2.ravel()
+
+class MinPermDistBulk(MinDistBulk):
+    def __call__(self, coords1, coords2):
+        if self.measure.permlist is not None:
+            # we don't want to change the given coordinates
+            x1 = np.copy(coords1).reshape(-1, self.boxvec.size)
+            x2 = np.copy(coords2).reshape(-1, self.boxvec.size)
+            
+            bestdist = 1.0e10
+            for atom in xrange(len(x1)):
+                dx = x1[atom] - x2[atom]
+                self.transform.translate(x2, dx)
+                
+                dist, newx1, newx2 = optimize_permutations(x1, x2, self.measure.permlist, 
+                                                       box_lengths=self.boxvec)
+                if dist<bestdist:
+                    print "Atom ", atom, "updating best distance to ", dist
+                    x1, x2 = newx1.copy(), newx2.copy()
+                    bestdist = dist
+                    if dist<1.0e-5:
+                        return dist, x1, x2
+                    
+            return bestdist, x1, x2

@@ -539,6 +539,9 @@ class AATopologyBulk(AATopology):
           
 class TakestepAA(takestep.TakestepInterface):
     def __init__(self, topology, rotate=1.6, translate=0.):
+        print "Setting up TakestepAA"
+        print "translate", translate
+        print "rotate", rotate
         self.rotate = rotate
         self.translate = translate
         self.topology = topology

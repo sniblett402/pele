@@ -29,6 +29,7 @@ except ImportError:
 _findBestPermutationList = None
 if have_minperm:
     def _find_permutations(*args, **kwargs):
+#         print "Calling minperm from OPTIM"
         return find_permutations_OPTIM(*args, **kwargs)
 
 elif have_hungarian:
@@ -165,7 +166,8 @@ def find_permutations_OPTIM(X1, X2, box_lengths=None, make_cost_matrix=None):
         # it must have a value for passing to fortran 
         box_lengths = [1., 1., 1.]
     sx, sy, sz = box_lengths
-        
+#     print "passing in periodic:", periodic
+#     print "box lengths", sx, sy, sz    
     # run the minperm algorithm
     perm, dist, worstdist, worstradius = minperm.minperm(X1.ravel(), X2.ravel(), sx, sy, sz, periodic)
     perm -= 1 # fortran indexing
@@ -248,7 +250,7 @@ def find_best_permutation(X1, X2, permlist=None, user_algorithm=None,
     
     newperm = range(len(X1))
     disttot = 0.
-    
+#     print "permlist:", permlist
     for atomlist in permlist:
         if len(atomlist) == 0:
             continue
@@ -258,9 +260,11 @@ def find_best_permutation(X1, X2, permlist=None, user_algorithm=None,
             dist, perm = find_permutations_hungarian(X1[atomlist], X2[atomlist], make_cost_matrix=user_cost_matrix, **kwargs)
         else:
             dist, perm = _find_permutations(X1[atomlist], X2[atomlist], **kwargs)
-        
+#         print "perm straight from OPTIM", perm
         disttot += dist**2
+#         print "zipping"
         for atom, i in zip(atomlist,xrange(len(atomlist))):
+#             print atom, i, newperm[atom], perm[i]
             newperm[atom] = atomlist[perm[i]]
     dist = np.sqrt(disttot)
     return dist, newperm
@@ -296,7 +300,7 @@ def optimize_permutations(X1, X2, permlist=None, user_algorithm=None,
         
             permlist = [range(1,natoms/2), range(natoms/2,natoms)]
 
-    user_algoriithm : None or callable
+    user_algorithm : None or callable
         you can optionally pass which algorithm to use to optimize the permutations the structures
     gen_cost_matrix : None or callable
         user function to generate the cost matrix
@@ -321,16 +325,35 @@ def optimize_permutations(X1, X2, permlist=None, user_algorithm=None,
     find_best_permutation : 
         use this function to find the optimized permutation without changing the coordinates.
     """
+#     print "box_lengths", box_lengths
     if box_lengths is not None:
         kwargs["box_lengths"] = box_lengths
+       
+#     for i in xrange(len(X1)):
+#         X1[i] -= box_lengths[0]*np.round(X1[i]/box_lengths[0])
+#         X2[i] -= box_lengths[0]*np.round(X2[i]/box_lengths[0])        
+    
     dist, perm = find_best_permutation(X1, X2, permlist=permlist, 
                     user_algorithm=user_algorithm, **kwargs)
     X2_ = X2.reshape([-1, 3])
+    #print "X2_", X2_
+#     print "perm", perm
     X2new = X2_[perm].flatten()
+    #print "X2new", X2new
+    #print "X1", X1
+          
+#     for i in xrange(X2_.shape[0]):
+#         if np.linalg.norm(X1.reshape(-1,3)[i]-X2.reshape(-1,3)[i])>1e-4:
+#             print "i, X1[i], X2[i]", i, X1.reshape(-1,3)[i], X2.reshape(-1,3)[i]
+#             print "X1[i], X2new[i]", X1.reshape(-1,3)[i], X2new.reshape(-1,3)[i]
+# 
+#     print "dist returned by find_best_permutation", dist
     
     if recalculate_distance is not None:
         # Recalculate the distance.  We can't trust the returned value
         dist = _cartesian_distance(X1, X2new, box_lengths)
+        # shouldn't this be "dist = recalculate_distance(X1, X2new, box_lengths)"?
+#     print "recalculated distance", dist
     
     return dist, X1, X2new
 
