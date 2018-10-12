@@ -25,6 +25,16 @@ try:
 except ImportError:
     pass
 
+print "The following permutational algorithms are available (in the order by which they will be used):"
+if have_minperm:
+    print "minperm"
+if have_hungarian:
+    print "hungarian"
+if have_munkres:
+    print "munkres"
+
+
+
 
 _findBestPermutationList = None
 if have_minperm:
@@ -133,7 +143,7 @@ def find_permutations_hungarian( X1, X2, make_cost_matrix=_make_cost_matrix ):
     # cost[j,i] = (X1(i,:) - X2(j,:))**2
     #########################################
     cost = make_cost_matrix(X1, X2)
-
+    #print "Using hungarian algorithm"
     #########################################
     # run the hungarian algorithm
     #########################################
@@ -156,7 +166,7 @@ def find_permutations_OPTIM(X1, X2, box_lengths=None, make_cost_matrix=None):
     """
     use OPTIM's minperm() routine to calculate the optimum permutation
     """    
-    
+    #print "Using OPTIM minperm"
     if make_cost_matrix is not _make_cost_matrix and make_cost_matrix is not None:
         raise RuntimeError("cannot use a custom cost matrix with findBestPermutationListOPTIM")
 
@@ -169,7 +179,9 @@ def find_permutations_OPTIM(X1, X2, box_lengths=None, make_cost_matrix=None):
 #     print "passing in periodic:", periodic
 #     print "box lengths", sx, sy, sz    
     # run the minperm algorithm
+    #print "Starting minperm call"
     perm, dist, worstdist, worstradius = minperm.minperm(X1.ravel(), X2.ravel(), sx, sy, sz, periodic)
+    #print "Returned from minperm"
     perm -= 1 # fortran indexing
 
     # note, dist returned by minperm comes will only be accurate to 6 decimal places at best.
@@ -244,10 +256,10 @@ def find_best_permutation(X1, X2, permlist=None, user_algorithm=None,
     if reshape:
         X1 = X1.reshape([-1,3])
         X2 = X2.reshape([-1,3])
-    
+ 
     if permlist is None:
         permlist = [range(len(X1))]
-    
+
     newperm = range(len(X1))
     disttot = 0.
 #     print "permlist:", permlist
@@ -259,6 +271,9 @@ def find_best_permutation(X1, X2, permlist=None, user_algorithm=None,
         elif user_cost_matrix is not _make_cost_matrix:
             dist, perm = find_permutations_hungarian(X1[atomlist], X2[atomlist], make_cost_matrix=user_cost_matrix, **kwargs)
         else:
+            #print "Using default find_permutations method"
+            #print "atomlist:", atomlist
+            #print "Lengths to optimise:", X1[atomlist].shape, X2[atomlist].shape
             dist, perm = _find_permutations(X1[atomlist], X2[atomlist], **kwargs)
 #         print "perm straight from OPTIM", perm
         disttot += dist**2
@@ -267,10 +282,13 @@ def find_best_permutation(X1, X2, permlist=None, user_algorithm=None,
 #             print atom, i, newperm[atom], perm[i]
             newperm[atom] = atomlist[perm[i]]
     dist = np.sqrt(disttot)
+
     return dist, newperm
 
 def _cartesian_distance_periodic(x1, x2, box_lengths):
     dim = len(box_lengths)
+    x1 = x1.reshape(-1,dim)
+    x2 = x2.reshape(-1,dim)
     dx = x2 - x1
     dx = dx.reshape([-1,dim])
     dx -= box_lengths * np.round(dx / box_lengths[np.newaxis, :])
@@ -335,6 +353,7 @@ def optimize_permutations(X1, X2, permlist=None, user_algorithm=None,
     
     dist, perm = find_best_permutation(X1, X2, permlist=permlist, 
                     user_algorithm=user_algorithm, **kwargs)
+    #print "Found best permutation"
     X2_ = X2.reshape([-1, 3])
     #print "X2_", X2_
 #     print "perm", perm

@@ -33,7 +33,6 @@ cdef class Harmonic(_pele.BasePotential):
     cdef int bdim
     
     def __cinit__(self, coords, k, bdim=3, com=False):
-        
         cdef np.ndarray[double, ndim=1] corigin = coords
         self.k = k
         self.com = com

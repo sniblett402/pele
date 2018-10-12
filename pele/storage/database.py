@@ -555,7 +555,8 @@ class Database(object):
             if self.compareMinima:
                 if not self.compareMinima(new, m):
                     continue
-            self.lock.release() 
+            self.lock.release()
+#            print "Rejected attempt to add a new minimum with energy ", E, " which was the same as ", m.id(), "with energy ", m.energy
             return m
 
         if max_n_minima is not None and max_n_minima > 0:
@@ -823,7 +824,7 @@ class Database(object):
         else:
             return query.all()
 
-    def add_property(self, name, value, dtype=None, commit=True, overwrite=True):
+    def add_property(self, name, value, dtype=None, commit=True, overwrite=True, print_warnings=True):
         """add a system property to the database
         
         Parameters
@@ -855,7 +856,7 @@ class Database(object):
             if not same:
                 if not overwrite:
                     raise RuntimeError("property %s already exists and the value does not compare equal to the new value." )
-                print "warning: overwriting old property", new.item()
+                print "warning: overwriting old database property"#, new.item()
 
         if dtype is None:
             # try to determine type of the value

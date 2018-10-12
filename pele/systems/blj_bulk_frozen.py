@@ -5,6 +5,8 @@ from pele.potentials import FrozenPotentialWrapper
 from pele.mindist import optimize_permutations
 from pele.systems.morse_bulk import put_in_box
 
+import overlap
+from overlap_basinhopping import overlap_BasinHopping
 
 class BLJBulkFrozen(BLJBulk):
     """Binary Lennard Jones in a periodic box with frozen atoms"""
@@ -128,6 +130,55 @@ class BLJBulkFrozen(BLJBulk):
         db = system.create_database(dbname, createdb=False, overwrite_properties=True)
     
         return system, db, initial_coords
+
+
+    def get_basinhopping(self, database=None, takestep=None, coords=None, add_minimum=None,
+                         max_n_minima=None, overlap_version=True, overlap_acceptstep=False, **kwargs):
+        """ This function replaces the default get_basinhopping only when overlap_version is set to True.
+        In this case, an overlap_BasinHopping object is used that accepts/rejects steps based on how the
+        overlap of the new minimum compares with the reference minimum, rather than using the minimised energy."""
+
+        if not overlap_version:
+            return super(BLJBulkFrozen, self).get_basinhopping(database, takestep, coords, add_minimum, max_n_minima, **kwargs)
+
+
+        # The following lines (down to the if add_minimum statement) are adapted from BaseSystem.get_basinhopping without changing functionality.
+        tmp = self.params["basinhopping"].copy()
+        tmp.update(kwargs)
+        kwargs = tmp
+ 
+        # extract max_n_minima from kwargs
+        try:
+            val = kwargs.pop("max_n_minima")
+            if max_n_minima is None:
+                max_n_minima = val
+        except KeyError:
+            pass
+        try:
+            acceptStep = kwargs.pop("acceptStep") # The value corresponding to this key should be a list of
+                                                  # functions that will act as the acceptance test for the
+                                                  # basinhopping.
+        except KeyError:
+            acceptStep = None # If no acceptStep is specified, this will eventually be set to Metropolis.
+
+        pot = self.get_potential()
+        if coords is None:
+            coords = self.get_random_configuration()
+        if takestep is None:
+            takestep = self.get_takestep()
+        if database is None:
+            database = self.create_database()
+        if add_minimum is not None:
+            raise ValueError("add_minimum specified but we are using overlap basinhopping so this method is overwritten.")
+
+
+        overlap_calculator = overlap.overlap_subset_default(0.3, range(len(self.mobile_Aatoms)), 
+                                                            self.coords_converter.get_reduced_coords(self.reference_coords),
+                                                            permlist=[range(len(self.mobile_Aatoms))], boxvec=self.boxvec)
+                      
+        bh = overlap_BasinHopping(coords, pot, takestep, overlap_calculator, database, acceptTest=acceptStep, **kwargs)
+        return bh
+
 
 def create_frozenblj_system_from_db(dbname):
     from pele.storage import Database

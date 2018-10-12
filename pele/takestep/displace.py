@@ -22,7 +22,8 @@ class RandomDisplacement(TakestepSlice):
     ----------
     stepsize : float
         magnitude of random displacement
-
+    srange : list
+	list of the atom indices which will be displaced
     """
 
     def takeStep(self, coords, **kwargs):

@@ -120,6 +120,7 @@ public :
     {
         if (! func_initialized_){
             // note: this needs to be both here and in one_iteration
+	  //            std::cout<<"Initialising gradient in run function" << std::endl;
             initialize_func_gradient();
         }
 
@@ -130,6 +131,7 @@ public :
                 break;
             }
             one_iteration();
+	    if (i >= niter-1) std::cout << "Minimisation failed. Stopping minimizer after step " << i << std::endl;
         }
     }
 
@@ -192,6 +194,7 @@ public :
     virtual bool stop_criterion_satisfied()
     {
         if (! func_initialized_) initialize_func_gradient();
+	//	if (rms_ <= tol_) std::cout << "Returning from optimiser: rms = " << rms_ << " is below the tolerance " << tol_ << std::endl;
         return rms_ <= tol_;
     }
 

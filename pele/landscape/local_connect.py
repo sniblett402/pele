@@ -8,7 +8,6 @@ __all__ = ["LocalConnect"]
 
 logger = logging.getLogger("pele.connect")
 
-
 def _refineTS(pot, coords, tsSearchParams=None, eigenvec0=None, pushoff_params=None):
     """
     find nearest transition state to NEB climbing image.  Then fall

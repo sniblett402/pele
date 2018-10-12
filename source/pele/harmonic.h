@@ -51,6 +51,7 @@ double inline BaseHarmonic::get_energy_gradient(pele::Array<double> x, pele::Arr
     for (size_t i = 0; i < x.size(); ++i) {
         grad[i] = _k * _distance[i];
     }
+    //std::cout << "Calculated energy " << 0.5* _k * dot(_distance, _distance) << "\n";
     return 0.5 * _k * dot(_distance, _distance);
 }
 

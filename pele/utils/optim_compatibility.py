@@ -36,7 +36,7 @@ _id_count = 0
 #        assert self.id() is not None
 #        return self.id()
 
-def read_points_min_ts(fname, ndof=None, endianness="="):
+def read_points_min_ts(fname, ndof=None, endianness="=", truncate_errors=True):
     """
     read coords from a points.min or a points.ts file
     
@@ -76,8 +76,11 @@ def read_points_min_ts(fname, ndof=None, endianness="="):
         coords = np.fromfile(fin, dtype=np.dtype(endianness + "d"))
     if ndof is not None:
         if len(coords) % ndof != 0:
-            raise Exception("number of double precision variables read from %s (%s) is not divisible by ndof (%d)" %
-                            (fname, len(coords), ndof))
+            if truncate_errors:
+                print "Warning: number of double precision variables read from "+fname+" ("+str(len(coords))+") is not divisible by ndof ("+str(ndof)+")"
+            else:
+                raise Exception("number of double precision variables read from %s (%s) is not divisible by ndof (%d)" %
+                                (fname, len(coords), ndof))
         #    print coords
     return coords.reshape(-1)
 
@@ -139,7 +142,7 @@ class OptimDBConverter(object):
 
     def __init__(self, database, ndof=None, mindata="min.data",
                  tsdata="ts.data", pointsmin="points.min", pointsts="points.ts",
-                 endianness="=", assert_coords=True):
+                 endianness="=", assert_coords=True, coords_converter=None):
         self.db = database
         self.ndof = ndof
         self.mindata = mindata
@@ -148,6 +151,7 @@ class OptimDBConverter(object):
         self.pointsts = pointsts
         self.endianness = endianness
         self.no_coords_ok = not assert_coords
+        self.cc = coords_converter
 
     def setAccuracy(self, accuracy=0.000001):
         self.db.accuracy = accuracy
@@ -164,6 +168,7 @@ class OptimDBConverter(object):
         #        f_len = file_len(self.mindata)
         minima_dicts = []
         for line in open(self.mindata, 'r'):
+
             sline = line.split()
 
             # get the coordinates corresponding to this minimum
@@ -181,8 +186,8 @@ class OptimDBConverter(object):
             # must add minima like this.  If you use db.addMinimum()
             # some minima with similar energy might be assumed to be duplicates
             min_dict = dict(energy=e, coords=coords, invalid=False,
-                            fvib=fvib, pgorder=pg
-            )
+                                fvib=fvib, pgorder=pg
+                                )
             minima_dicts.append(min_dict)
 
             indx += 1
@@ -212,6 +217,9 @@ class OptimDBConverter(object):
             # read data from the min.data line            
             e, fvib = map(float, sline[:2])  # energy and vibrational free energy
             pg = int(sline[2])  # point group order
+
+            if self.cc:
+                coords = self.cc(coords)
 
             # create the minimum object and attach the data
             # must add minima like this.  If you use db.addMinimum()
@@ -259,6 +267,9 @@ class OptimDBConverter(object):
             #            m2indx -= 1
             #            min1 = self.index2min[m1indx - 1] # minus 1 for fortran indexing
             #            min2 = self.index2min[m2indx - 1] # minus 1 for fortran indexing
+
+            if self.cc:
+                coords = self.cc(coords)
 
             # must add transition states like this.  If you use db.addtransitionState()
             # some transition states might be assumed to be duplicates
@@ -415,7 +426,7 @@ class WritePathsampleDB(object):
 
     def __init__(self, database, mindata="min.data",
                  tsdata="ts.data", pointsmin="points.min", pointsts="points.ts",
-                 endianness="=", assert_coords=True, aatopology=None):
+                 endianness="=", assert_coords=True, coordsconverter=None, write_points=True):
         self.db = database
         self.mindata = mindata
         self.tsdata = tsdata
@@ -423,7 +434,11 @@ class WritePathsampleDB(object):
         self.pointsts = pointsts
         self.endianness = endianness
 
-        self.aatopology=aatopology # sn402: Added to allow conversion of angle-axis databases
+        self.coordsconverter = coordsconverter # sn402: specify a function which will be called on the coordinates before they are written
+                                               # Examples include aatopology.to_atomistic, or coords_converter.get_full_coords for a frozen
+                                               # potential
+
+        self.write_points = write_points       # sn402: if False, we save time and space by not writing out the coordinates of the minima/ts
     
     def write_min_data_ts_data(self):
 
@@ -447,10 +462,12 @@ class WritePathsampleDB(object):
                     data_out.write("{} {} {} 1 1 1\n".format(m.energy,
                                                               fvib,
                                                               pgorder))
-                    if self.aatopology is None:
-                        write_points_min_ts(point_out, m.coords, endianness=self.endianness)
-                    else:
-                        write_points_min_ts(point_out, self.aatopology.to_atomistic(m.coords), endianness=self.endianness)
+                    
+                    if self.write_points:
+                        if self.coordsconverter is None:
+                            write_points_min_ts(point_out, m.coords, endianness=self.endianness)
+                        else:
+                            write_points_min_ts(point_out, self.coordsconverter(m.coords), endianness=self.endianness)
 
         del m
         
@@ -474,10 +491,12 @@ class WritePathsampleDB(object):
                     data_out.write("{energy} {fvib} {pgorder} {min1} {min2} 1 1 1\n".format(
                         energy=ts.energy, fvib=fvib, pgorder=pgorder, 
                         min1=m1_label, min2=m2_label))
-                    if self.aatopology is None:
-                        write_points_min_ts(point_out, ts.coords, endianness=self.endianness)
-                    else:
-                        write_points_min_ts(point_out, self.aatopology.to_atomistic(ts.coords), endianness=self.endianness)
+
+                    if self.write_points:
+                        if self.coordsconverter is None:
+                            write_points_min_ts(point_out, ts.coords, endianness=self.endianness)
+                        else:
+                            write_points_min_ts(point_out, self.coordsconverter(ts.coords), endianness=self.endianness)
         
     
     def write_db(self):

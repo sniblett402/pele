@@ -26,7 +26,7 @@ def main():
         raise AttributeError("Unknown system type specified.")
 
     topology = system.aatopology
-    writer = WritePathsampleDB(db,aatopology=topology)
+    writer = WritePathsampleDB(db,coordsconverter=topology.to_atomistic)
     writer.write_db()
 
 

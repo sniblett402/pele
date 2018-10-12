@@ -165,6 +165,7 @@ class NEB(object):
         :quenchRoutine: quench algorithm to use for optimization.
 
         :quenchParams: parameters for the quench """
+
         if quenchRoutine is None:
             if self.quenchRoutine is None:
                 quenchRoutine = mylbfgs

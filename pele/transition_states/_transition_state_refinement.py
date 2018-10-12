@@ -113,7 +113,7 @@ class FindTransitionState(object):
                  max_uphill_step_initial=0.2,
                  demand_initial_negative_vec=False,
                  negatives_before_check=10,
-                 verbosity=1,
+                 verbosity=0,
                  check_negative=True,
                  invert_gradient=False,
                  hessian_diagonalization=False):

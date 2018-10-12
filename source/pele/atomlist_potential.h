@@ -55,7 +55,6 @@ public:
             for(size_t j=jstart; j<_atoms2.size(); ++j) {
                 size_t atom2 = _atoms2[j];
                 size_t i2 = _ndim * atom2;
-
                 _dist->get_rij(dr, &x[i1], &x[i2]);
                 double r2 = 0;
                 for (size_t k=0;k<_ndim;++k){r2 += dr[k]*dr[k];}
@@ -129,7 +128,6 @@ public:
             for(size_t j=jstart; j<_atoms2.size(); ++j) {
                 size_t atom2 = _atoms2[j];
                 size_t i2 = _ndim * atom2;
-
                 _dist->get_rij(dr, &x[i1], &x[i2]);
                 double r2 = 0;
                 for (size_t k=0;k<_ndim;++k){r2 += dr[k]*dr[k];}

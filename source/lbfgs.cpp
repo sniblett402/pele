@@ -30,9 +30,10 @@ LBFGS::LBFGS( std::shared_ptr<pele::BasePotential> potential, const pele::Array<
 */
 void LBFGS::one_iteration()
 {
-    if (!func_initialized_)
+    if (!func_initialized_) {
+      //       std::cout<<"Initialising gradient from within LBFGS one_iteration"<<std::endl;
         initialize_func_gradient();
-
+    }
     // make a copy of the position and gradient
     Array<double> xold(x_.copy());
     Array<double> gold(g_.copy());
@@ -43,7 +44,8 @@ void LBFGS::one_iteration()
 
     // reduce the stepsize if necessary
     double stepsize = backtracking_linesearch(step);
-
+    if (verbosity_>0)
+      std::cout<< "Final stepsize: "<<stepsize<<std::endl;
     // update the LBFGS memeory
     update_memory(xold, gold, x_, g_);
 
@@ -97,18 +99,30 @@ void LBFGS::update_memory(
 
 void LBFGS::compute_lbfgs_step(Array<double> step)
 {
+  //    std::cout<<"Computing lbfgs step now. size of x vector: "<<x_.size()<<std::endl;
+  //    std::cout<<"End of vector: "<<x_[x_.size()-3]<<" "<<x_[x_.size()-2]<<" "<<x_[x_.size()-1]<<std::endl;
+
     if (k_ == 0){
         // take a conservative first step
-        double gnorm = norm(g_);
-        if (gnorm > 1.) gnorm = 1. / gnorm;
-        for (size_t j2 = 0; j2 < x_.size(); ++j2){
-            step[j2] = -gnorm * H0_ * g_[j2];
-        }
+      double gnorm = norm(g_);
+      if (verbosity_ > 0) 
+	{ std::cout<<"Computing first step"<<std::endl;
+	  std::cout<<"gnorm: "<<gnorm<<std::endl; }
+      if (gnorm > 1.) gnorm = 1. / gnorm;
+      for (size_t j2 = 0; j2 < x_.size(); ++j2){
+	step[j2] = -gnorm * H0_ * g_[j2];
+	if ((verbosity_>0) and (x_.size()-j2<2)) {
+	  std::cout<<"k, gradient, step "<<x_[j2]<<" "<<g_[j2]<<" "<<step[j2]<<std::endl;
+	}
+      }
         return;
     }
 
     // copy the gradient into step
     step.assign(g_);
+
+    if (verbosity_ >0)
+      std::cout<<"k, Gradient in k: "<< x_[x_.size()-1] << " " << step[step.size()-1]<<std::endl;
 
     int jmin = std::max(0, k_ - M_);
     int jmax = k_;
@@ -125,10 +139,10 @@ void LBFGS::compute_lbfgs_step(Array<double> step)
             step[j2] -= alpha[i] * y_[i][j2];
         }
     }
-
+    //    std::cout<<"Gradient in k after looping backwards through memory: "<< step[step.size()-1]<<std::endl;
     // scale the step size by H0
     step *= H0_;
-
+    //std::cout<<"Gradient in k after scaling: "<< step[step.size()-1]<<std::endl;
     // loop forwards through the memory
     for (int j = jmin; j < jmax; ++j){
         i = j % M_;
@@ -141,6 +155,9 @@ void LBFGS::compute_lbfgs_step(Array<double> step)
 
     // invert the step to point downhill
     step *= -1;
+
+    if (verbosity_ >0)
+      std::cout<<"Step in k: " << step[step.size()-1]<<std::endl;
 }
 
 double LBFGS::backtracking_linesearch(Array<double> step)
@@ -173,6 +190,8 @@ double LBFGS::backtracking_linesearch(Array<double> step)
         for (size_t j2 = 0; j2 < xnew.size(); ++j2){
             xnew[j2] = x_[j2] + factor * step[j2];
         }
+	if (verbosity_>0)
+	  std::cout << "Updating gradient in linesearch" << std::endl;
         compute_func_gradient(xnew, fnew, gnew);
 
         double df = fnew - f_;
@@ -222,6 +241,7 @@ void LBFGS::reset(pele::Array<double> &x0)
     iter_number_ = 0;
     nfev_ = 0;
     x_.assign(x0);
+    std::cout << "Initialising gradient in reset function" << std::endl;
     initialize_func_gradient();
 }
 
